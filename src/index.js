@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
 const DEFAULT_TIMEOUT = 0; //Never
 const DEFAULT_MAX_PENDING = 1000;
 
-class AsyncLock {
+class ReadwriteLock {
 
     constructor(opts) {
         opts = opts || {};
@@ -30,8 +30,8 @@ class AsyncLock {
 	    return this._acquireBatch(key, fn, opts);
 	}
 
-	if (typeof fn !== 'function') {
-	    throw new Error('You must pass a function to execute');
+	if (typeof fn !== "function") {
+	    throw new Error("You must pass a function to execute");
 	}
 
 	opts = opts || {};
@@ -54,12 +54,12 @@ class AsyncLock {
 
 	        if (locked) {
 		    if (!!this.queues[key] && 0 < this.queues[key].length) {
-		        this.queues[key].shift()();
+		        process.nextTick(this.queues[key].shift());
 		    }
 	        }
 	    };
 
-	    let run = (locked) => {
+	    let run = () => {
 	        if (timer) {
 		    clearTimeout(timer);
 		    timer = null;
@@ -67,32 +67,32 @@ class AsyncLock {
                 
 	        this._promiseTry(fn)
 		    .then((ret) => {
-		        done(locked, undefined, ret);
+		        done(true, undefined, ret);
 		    })
                     .catch((error) => {
-		        done(locked, error);
+		        done(true, error);
 		    });
 	    };
             
 	    if (!this.queues[key]) {
 	        this.queues[key] = [];
-	        run(true);
+	        run();
 	    } else if (this.maxPending <= this.queues[key].length) {
-	        done(false, new Error('Too much pending tasks'));
+	        done(false, new Error("Too much pending tasks"));
 	    } else {
 	        this.queues[key].push(() => {
-		    run(true);
+		    run();
 	        });
-
-	        var timeout = opts.timeout || this.timeout;
+                
+	        let timeout = opts.timeout || this.timeout;
 	        if (timeout) {
 		    timer = setTimeout(() => {
 		        timer = null;
-		        done(false, new Error('async-lock timed out'));
+		        done(false, new Error("readwrite-lock timed out"));
 		    }, timeout);
 	        }
 	    }
-        }
+        });
     }
 
     /*
@@ -113,9 +113,9 @@ class AsyncLock {
      */
     _acquireBatch(keys, fn, opts) {
 	var getFn = (key, fn) => {
-	    return () => {
-		this.acquire(key, fn, opts);
-	    };
+            return () => {
+	        return this.acquire(key, fn, opts);
+            };
 	};
 
 	var fnx = fn;
@@ -123,15 +123,7 @@ class AsyncLock {
 	    fnx = getFn(key, fnx);
 	});
 
-	var deferred = this._deferPromise();
-	fnx((err, ret) => {
-	    if (err) {
-		deferred.reject(err);
-	    } else {
-		deferred.resolve(ret);
-	    }
-	});
-	return deferred.promise;
+        return fnx();
     }
 
     /*
@@ -148,7 +140,7 @@ class AsyncLock {
     }
 
     /**
-     * Promise.try() implementation to become independent of Q-specific methods
+     * Promise.try() treat exceptions as rejected promise
      */
     _promiseTry(fn) {
 	try {
@@ -157,39 +149,7 @@ class AsyncLock {
 	    return this.Promise.reject(e);
 	}
     }
-
-    /**
-     * Promise.defer() implementation to become independent of Q-specific methods
-     */
-    _deferPromise() {
-	if (typeof this.Promise.defer === 'function') {
-	    // note that Q does not have a constructor with reject/resolve functions so we have no option but use its defer() method
-	    return this.Promise.defer();
-	} else {
-	    // for promise implementations that don't have a defer() method we create one ourselves
-	    var result = {
-		reject: function(err) {
-		    // some promise libraries e.g. Q take some time setting the reject property while others do it synchronously
-		    return Promise.resolve().then(function() {
-			result.reject(err);
-		    });
-		},
-		resolve: function(ret) {
-		    // some promise libraries e.g. Q take some time setting the reject property while others do it synchronously
-		    return Promise.resolve().then(function() {
-			result.resolve(ret);
-		    });
-		},
-		promise: undefined
-	    };
-	    result.promise = new this.Promise(function(resolve, reject) {
-		result.reject = reject;
-		result.resolve = resolve;
-	    });
-	    return result;
-	}
-    }
-    
+        
 }
 
-module.exports = AsyncLock;
+module.exports = ReadwriteLock;

@@ -18,6 +18,7 @@
   "license": "MIT",
   "keywords": [
     "lock",
+    "readwrite",
     "async",
     "concurrency",
     "critical",
