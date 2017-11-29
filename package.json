@@ -7,13 +7,13 @@
     "url": "https://github.com/kdeegan"
   },
   "private": false,
-  "homepage": "https://github.com/dataserve/async-readwrite-lock",
+  "homepage": "https://github.com/dataserve/readwrite-lock",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dataserve/async-readwrite-lock.git"
+    "url": "https://github.com/dataserve/readwrite-lock.git"
   },
   "bugs": {
-    "url": "https://github.com/dataserve/async-readwrite-lock/issues"
+    "url": "https://github.com/dataserve/readwrite-lock/issues"
   },
   "license": "MIT",
   "keywords": [
