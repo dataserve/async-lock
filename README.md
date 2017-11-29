@@ -1,14 +1,13 @@
-# async-lock
+# readwrite-lock
 
 Lock on asynchronous code
 
-[![Build Status](https://travis-ci.org/rogierschouten/async-lock.svg?branch=master)](https://travis-ci.org/rogierschouten/async-lock)
+[![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
 
-* ES6 promise supported
+* Uses ES6 promises
 * Multiple keys lock supported
 * Timeout supported
 * Pending task limit supported
-* Domain reentrant supported
 * 100% code coverage
 
 ## Why you need locking on single threaded nodejs?
@@ -33,40 +32,32 @@ user2: redis.set('key', 1 x 2) -> 2
 Obviously it's not what you expected
 
 
-With asyncLock, you can easily write your async critical section
+With readwriteLock, you can easily write your async critical section
 ```js
-lock.acquire('key', function(cb){
+lock.acquire('key', function(){
 	// Concurrency safe
-	redis.get('key', function(err, value){
-		redis.set('key', value * 2, cb);
+	redis.get('key', (err, value) => {
+		redis.set('key', value * 2);
 	});
-}, function(err, ret){
-});
+}.then((result) => {
+}).catch((err) => {
+})
 ```
 
 ## Get Started
 
 ```
-var AsyncLock = require('async-lock');
-var lock = new AsyncLock();
+var ReadwriteLock = require('readwrite-lock');
+var lock = new ReadwriteLock();
 
 /**
  * @param {String|Array} key 	resource key or keys to lock
  * @param {function} fn 	execute function
- * @param {function} cb 	(optional) callback function, otherwise will return a promise
  * @param {Object} opts 	(optional) options
  */
-lock.acquire(key, function(done){
-	// async work
-	done(err, ret);
-}, function(err, ret){
-	// lock released
-}, opts);
-
-// Promise mode
-lock.acquire(key, function(){
+lock.acquire(key, () => {
 	// return value or promise
-}, opts).then(function(){
+}, opts).then(() => {
 	// lock released
 });
 ```
@@ -74,17 +65,9 @@ lock.acquire(key, function(){
 ## Error Handling
 
 ```
-// Callback mode
-lock.acquire(key, function(done){
-	done(new Error('error'));
-}, function(err, ret){
-	console.log(err.message) // output: error
-});
-
-// Promise mode
-lock.acquire(key, function(){
+lock.acquire(key, () => {
 	throw new Error('error');
-}).catch(function(err){
+}).catch((err) => {
 	console.log(err.message) // output: error
 });
 ```
@@ -92,40 +75,21 @@ lock.acquire(key, function(){
 ## Acquire multiple keys
 
 ```
-lock.acquire([key1, key2], fn, cb);
-```
-
-## Domain reentrant lock
-
-Lock is reentrant in the same domain
-
-```
-var domain = require('domain');
-var lock = new AsyncLock({domainReentrant : true});
-
-var d = domain.create();
-d.run(function(){
-	lock.acquire('key', function(){
-		//Enter lock
-		return lock.acquire('key', function(){
-			//Enter same lock twice
-		});
-	});
-});
+lock.acquire([key1, key2], fn);
 ```
 
 ## Options
 
 ```
 // Specify timeout
-var lock = new AsyncLock({timeout : 5000});
-lock.acquire(key, fn, function(err, ret){
+var lock = new ReadwriteLock({timeout : 5000});
+lock.acquire(key, fn, (err, ret) => {
 	// timed out error will be returned here if lock not acquired in given time
 });
 
 // Set max pending tasks
-var lock = new AsyncLock({maxPending : 1000});
-lock.acquire(key, fn, function(err, ret){
+var lock = new ReadwriteLock({maxPending : 1000});
+lock.acquire(key, fn, (err, ret) => {
 	// Handle too much pending error
 })
 
@@ -133,22 +97,17 @@ lock.acquire(key, fn, function(err, ret){
 lock.isBusy();
 
 // Use your own promise library instead of the global Promise variable
-var lock = new AsyncLock({Promise : require('bluebird')}); // Bluebird
-var lock = new AsyncLock({Promise : require('q')}); // Q
+var lock = new ReadwriteLock({Promise : require('bluebird')}); // Bluebird
+var lock = new ReadwriteLock({Promise : require('q')}); // Q
 
 // Add a task to the front of the queue waiting for a given lock
-lock.acquire(key, fn1, cb); // runs immediately
-lock.acquire(key, fn2, cb); // added to queue
-lock.acquire(key, priorityFn, cb, {skipQueue: true}); // jumps queue and runs before fn2
+lock.acquire(key, fn1); // runs immediately
+lock.acquire(key, fn2); // added to queue
 ```
-
-## Changelog
-
-See [Changelog](./History.md)
 
 ## Issues
 
-See [isse tracker](https://github.com/rogierschouten/async-lock/issues).
+See [isse tracker](https://github.com/dataserve/readwrite-lock/issues).
 
 ## License
 
