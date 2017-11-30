@@ -12,7 +12,7 @@ class Lock {
     }
 
     append(id, isWrite, run) {
-	this.queue.push({
+        this.queue.push({
             id: id,
             isWrite: isWrite,
             run: run
@@ -80,16 +80,16 @@ class ReadwriteLock {
     constructor(opts) {
         opts = opts || {};
 
-	this.Promise = opts.Promise || Promise;
+        this.Promise = opts.Promise || Promise;
 
-	// format: {key : [{fn: fn, isWrite: isWrite}, {fn: fn, isWrite: isWrite}]}
-	// queues[key] = null indicates no job running for key
-	this.queues = {};
+        // format: {key : [{fn: fn, isWrite: isWrite}, {fn: fn, isWrite: isWrite}]}
+        // queues[key] = null indicates no job running for key
+        this.queues = {};
         this.queuesReaders = {};
         this.cnt = 0;
 
-	this.timeout = opts.timeout || DEFAULT_TIMEOUT;
-	this.maxPending = opts.maxPending || DEFAULT_MAX_PENDING;
+        this.timeout = opts.timeout || DEFAULT_TIMEOUT;
+        this.maxPending = opts.maxPending || DEFAULT_MAX_PENDING;
     }
 
     /**
@@ -115,29 +115,29 @@ class ReadwriteLock {
     }
 
     _acquire(isWrite, key, fn, opts) {
-	if (Array.isArray(key)) {
-	    return this._acquireBatch(isWrite, key, fn, opts);
-	}
+        if (Array.isArray(key)) {
+            return this._acquireBatch(isWrite, key, fn, opts);
+        }
 
-	if (typeof fn !== "function") {
-	    throw new Error("You must pass a function to execute");
-	}
+        if (typeof fn !== "function") {
+            throw new Error("You must pass a function to execute");
+        }
 
-	opts = opts || {};
+        opts = opts || {};
 
         return new Promise((resolve, reject) => {
-	    let timer = null;
+            let timer = null;
 
             let cnt = this.cnt++;
             
-	    let done = (locked, err, ret) => {
-		if (err) {
-		    reject(err);
-		} else {
-		    resolve(ret);
-		}
+            let done = (locked, err, ret) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(ret);
+                }
 
-	        if (locked) {
+                if (locked) {
                     this.debug(cnt, "DONE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
                     this.queues[key].done(isWrite);
 
@@ -152,50 +152,50 @@ class ReadwriteLock {
                             task.run();
                         }
                     } else if (this.queues[key].isEmpty()) {
-		        delete this.queues[key];
-		    }
-	        }
-	    };
+                        delete this.queues[key];
+                    }
+                }
+            };
             
-	    let run = () => {
-	        if (timer) {
-		    clearTimeout(timer);
-		    timer = null;
-	        }
+            let run = () => {
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
 
                 this.debug(cnt, "RUN", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
 
-	        this._promiseTry(fn)
-		    .then((ret) => {
+                this._promiseTry(fn)
+                    .then((ret) => {
                         done(true, undefined, ret)
-		    })
+                    })
                     .catch((error) => {
                         done(true, error)
-		    });
-	    };
+                    });
+            };
 
-	    if (!this.queues[key] || (!isWrite && this.queues[key].canRead())) {
+            if (!this.queues[key] || (!isWrite && this.queues[key].canRead())) {
                 if (!this.queues[key]) {
-	            this.queues[key] = new Lock;
+                    this.queues[key] = new Lock;
                 }
                 this.queues[key].run(isWrite);
-	        run();
-	    } else if (this.maxPending <= this.queues[key].pendingCnt()) {
-	        done(false, new Error("Too much pending tasks"));
-	    } else {
+                run();
+            } else if (this.maxPending <= this.queues[key].pendingCnt()) {
+                done(false, new Error("Too much pending tasks"));
+            } else {
                 if (DEBUG) {
                     console.log(cnt, "QUEUE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
                 }
                 this.queues[key].append(cnt, isWrite, run);
                 
-	        let timeout = opts.timeout || this.timeout;
-	        if (timeout) {
-		    timer = setTimeout(() => {
-		        timer = null;
-		        done(false, new Error("readwrite-lock timed out"));
-		    }, timeout);
-	        }
-	    }
+                let timeout = opts.timeout || this.timeout;
+                if (timeout) {
+                    timer = setTimeout(() => {
+                        timer = null;
+                        done(false, new Error("readwrite-lock timed out"));
+                    }, timeout);
+                }
+            }
         });
     }
 
@@ -253,27 +253,27 @@ class ReadwriteLock {
     }
 
     /*
-     *	Whether there is any running or pending asyncFunc
+     * Whether there is any running or pending asyncFunc
      *
-     *	@param {String} key
+     * @param {String} key
      */
     isBusy(key) {
-	if (!key) {
-	    return 0 < Object.keys(this.queues).length;
-	} else {
-	    return !!this.queues[key];
-	}
+        if (!key) {
+            return 0 < Object.keys(this.queues).length;
+        } else {
+            return !!this.queues[key];
+        }
     }
 
     /**
      * Promise.try() treat exceptions as rejected promise
      */
     _promiseTry(fn) {
-	try {
-	    return this.Promise.resolve(fn());
-	} catch (e) {
-	    return this.Promise.reject(e);
-	}
+        try {
+            return this.Promise.resolve(fn());
+        } catch (e) {
+            return this.Promise.reject(e);
+        }
     }
 
     debug(...args) {
@@ -282,7 +282,7 @@ class ReadwriteLock {
         }
         console.log("readwriteLock", ...args);
     }
-        
+    
 }
 
 module.exports = ReadwriteLock;

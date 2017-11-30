@@ -1,8 +1,8 @@
 # readwrite-lock
 
-Read/Write locks on asynchronous code
+[Read/Write locks](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock) on asynchronous code
 
-[A RW lock allows concurrent access for read-only operations, while write operations require exclusive access.](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock)
+[![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
 
 RW lock rules:
 * there may be one or more readers at a time
@@ -10,8 +10,7 @@ RW lock rules:
 * attempts to acquire read lock are queued as long as a write lock is taken
 * attempts to acquire write lock are queued as long as at least one read lock is taken
 
-[![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
-
+Features
 * Uses ES6 promises
 * Individual or an array of lock keys supported
 * Timeout supported
