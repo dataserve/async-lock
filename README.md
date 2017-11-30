@@ -1,6 +1,7 @@
 # readwrite-lock
 
 Read/Write locks on asynchronous code
+[A RW lock allows concurrent access for read-only operations, while write operations require exclusive access.](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock)
 
 [![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
 
@@ -81,12 +82,20 @@ lock.acquireRead(key, () => {
 }).catch((err) => {
 	console.log(err.message) // output: error
 });
+
+
+lock.acquireWrite(key, () => {
+	throw new Error('error');
+}).catch((err) => {
+	console.log(err.message) // output: error
+});
 ```
 
 ## Acquire multiple keys
 
 ```
 lock.acquireRead([key1, key2], fn);
+lock.acquireWrite([key1, key2], fn);
 ```
 
 ## Options
@@ -94,12 +103,18 @@ lock.acquireRead([key1, key2], fn);
 ```
 // Specify timeout
 var lock = new ReadwriteLock({timeout : 5000});
+lock.acquireRead(key, fn, (err, ret) => {
+	// timed out error will be returned here if lock not acquired in given time
+});
 lock.acquireWrite(key, fn, (err, ret) => {
 	// timed out error will be returned here if lock not acquired in given time
 });
 
 // Set max pending tasks
 var lock = new ReadwriteLock({maxPending : 1000});
+lock.acquireRead(key, fn, (err, ret) => {
+	// Handle too much pending error
+})
 lock.acquireWrite(key, fn, (err, ret) => {
 	// Handle too much pending error
 })
