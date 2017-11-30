@@ -1,11 +1,11 @@
 # readwrite-lock
 
-Lock on asynchronous code
+Read/Write locks on asynchronous code
 
 [![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
 
 * Uses ES6 promises
-* Multiple keys lock supported
+* Individual or an Array of lock keys supported
 * Timeout supported
 * Pending task limit supported
 * 100% code coverage
@@ -34,12 +34,12 @@ Obviously it's not what you expected
 
 With readwriteLock, you can easily write your async critical section
 ```js
-lock.acquire('key', function(){
+lock.acquireWrite('key', () => {
 	// Concurrency safe
 	redis.get('key', (err, value) => {
 		redis.set('key', value * 2);
 	});
-}.then((result) => {
+}).then((result) => {
 }).catch((err) => {
 })
 ```
@@ -55,7 +55,18 @@ var lock = new ReadwriteLock();
  * @param {function} fn 	execute function
  * @param {Object} opts 	(optional) options
  */
-lock.acquire(key, () => {
+lock.acquireRead(key, () => {
+	// return value or promise
+}, opts).then(() => {
+	// lock released
+});
+
+/**
+ * @param {String|Array} key 	resource key or keys to lock
+ * @param {function} fn 	execute function
+ * @param {Object} opts 	(optional) options
+ */
+lock.acquireWrite(key, () => {
 	// return value or promise
 }, opts).then(() => {
 	// lock released
@@ -65,7 +76,7 @@ lock.acquire(key, () => {
 ## Error Handling
 
 ```
-lock.acquire(key, () => {
+lock.acquireRead(key, () => {
 	throw new Error('error');
 }).catch((err) => {
 	console.log(err.message) // output: error
@@ -75,7 +86,7 @@ lock.acquire(key, () => {
 ## Acquire multiple keys
 
 ```
-lock.acquire([key1, key2], fn);
+lock.acquireRead([key1, key2], fn);
 ```
 
 ## Options
@@ -83,13 +94,13 @@ lock.acquire([key1, key2], fn);
 ```
 // Specify timeout
 var lock = new ReadwriteLock({timeout : 5000});
-lock.acquire(key, fn, (err, ret) => {
+lock.acquireWrite(key, fn, (err, ret) => {
 	// timed out error will be returned here if lock not acquired in given time
 });
 
 // Set max pending tasks
 var lock = new ReadwriteLock({maxPending : 1000});
-lock.acquire(key, fn, (err, ret) => {
+lock.acquireWrite(key, fn, (err, ret) => {
 	// Handle too much pending error
 })
 
@@ -99,10 +110,6 @@ lock.isBusy();
 // Use your own promise library instead of the global Promise variable
 var lock = new ReadwriteLock({Promise : require('bluebird')}); // Bluebird
 var lock = new ReadwriteLock({Promise : require('q')}); // Q
-
-// Add a task to the front of the queue waiting for a given lock
-lock.acquire(key, fn1); // runs immediately
-lock.acquire(key, fn2); // added to queue
 ```
 
 ## Issues
