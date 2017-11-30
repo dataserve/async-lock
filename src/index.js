@@ -4,6 +4,77 @@ const DEFAULT_TIMEOUT = 0; //Never
 const DEFAULT_MAX_PENDING = 1000;
 const DEBUG = false;
 
+class Lock {
+
+    constructor() {
+        this.queue = [];
+        this.readers = 0;
+    }
+
+    append(id, isWrite, run) {
+	this.queue.push({
+            id: id,
+            isWrite: isWrite,
+            run: run
+        });
+    }
+
+    run(isWrite) {
+        if (isWrite) {
+            this.readers = -1;
+        } else {
+            this.readers += 1;
+        }
+    }
+
+    done(isWrite) {
+        if (isWrite) {
+            this.readers = 0;
+        } else {
+            --this.readers;
+        }
+    }
+
+    canRead() {
+        return this.queue.length === 0;
+    }
+    
+    isEmpty() {
+        return this.queue.length === 0 && this.readers === 0;
+    }
+
+    pendingCnt() {
+        return this.queue.length;
+    }
+
+    shiftPending() {
+        if (this.queue.length === 0) {
+            return;
+        }
+        if (this.queue[0].isWrite && 0 < this.readers) {
+            return;
+        }
+        var tasks = [];
+        var task = this.queue.shift();
+        tasks.push(task);
+        if (task.isWrite) {
+            return tasks;
+        }
+        while (true) {
+            if (this.queue.length === 0) {
+                break;
+            }
+            task = this.queue[0];
+            if (task.isWrite) {
+                break;
+            }
+            tasks.push(this.queue.shift());
+        }
+        return tasks;
+    }
+
+}
+
 class ReadwriteLock {
 
     constructor(opts) {
@@ -67,20 +138,21 @@ class ReadwriteLock {
 		}
 
 	        if (locked) {
-                    if (DEBUG) {
-                        console.log(cnt, "DONE! READER", key, this.queuesReaders[key]);
-                    }
-                    if (isWrite) {
-                        this.queuesReaders[key] = 0;
-                    } else {
-                        --this.queuesReaders[key];
-                    }
+                    this.debug(cnt, "DONE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                    this.queues[key].done(isWrite);
 
-                    let continued = this._continueQueue(cnt, isWrite, key);
-                    
-		    if (!continued && this.queues[key].length === 0 && this.queuesReaders[key] === 0) {
+                    let pending = this.queues[key].shiftPending();
+                    if (pending && pending.length) {
+                        while (pending.length) {
+                            let task = pending.shift();
+
+                            this.debug(task.id, "SHIFTED", task.isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                            
+                            this.queues[key].run(task.isWrite);
+                            task.run();
+                        }
+                    } else if (this.queues[key].isEmpty()) {
 		        delete this.queues[key];
-                        delete this.queuesReaders[key];
 		    }
 	        }
 	    };
@@ -91,40 +163,30 @@ class ReadwriteLock {
 		    timer = null;
 	        }
 
-                if (isWrite) {
-                    this.queuesReaders[key] = -1;
-                } else {
-                    this.queuesReaders[key] += 1;
-                }
+                this.debug(cnt, "RUN", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
 
-                if (DEBUG) {
-                    console.log(cnt, isWrite ? "WRITER" : "READER", key, this.queuesReaders[key]);
-                }
-                
 	        this._promiseTry(fn)
 		    .then((ret) => {
-		        done(true, undefined, ret);
+                        done(true, undefined, ret)
 		    })
                     .catch((error) => {
-		        done(true, error);
+                        done(true, error)
 		    });
 	    };
-            
-	    if (!this.queues[key] || (!isWrite && this.queues[key].length === 0)) {
+
+	    if (!this.queues[key] || (!isWrite && this.queues[key].canRead())) {
                 if (!this.queues[key]) {
-	            this.queues[key] = [];
-                    this.queuesReaders[key] = 0;
+	            this.queues[key] = new Lock;
                 }
+                this.queues[key].run(isWrite);
 	        run();
-	    } else if (this.maxPending <= this.queues[key].length) {
+	    } else if (this.maxPending <= this.queues[key].pendingCnt()) {
 	        done(false, new Error("Too much pending tasks"));
 	    } else {
-	        this.queues[key].push({
-                    isWrite: isWrite,
-                    fn: () => {
-		        run();
-	            }
-                });
+                if (DEBUG) {
+                    console.log(cnt, "QUEUE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                }
+                this.queues[key].append(cnt, isWrite, run);
                 
 	        let timeout = opts.timeout || this.timeout;
 	        if (timeout) {
@@ -137,68 +199,57 @@ class ReadwriteLock {
         });
     }
 
-    _continueQueue(cnt, isWrite, key) {
-        if (this.queues[key].length === 0) {
-            return;
-        }
-        if (this.queues[key][0].isWrite && 0 < this.queuesReaders[key]) {
-            return;
-        }
-        if (DEBUG) {
-            console.log(cnt, "CONTINUE", key, this.queues[key][0].isWrite ? "WRITER" : "READER", this.queuesReaders[key]);
-        }
-        var nx = this.queues[key].shift();
-        setImmediate(nx.fn);
-        if (nx.isWrite) {
-            return true;
-        }
-        while (true) {
-            if (this.queues[key].length === 0) {
-                break;
-            }
-            nx = this.queues[key][0];
-            if (nx.isWrite) {
-                break;
-            }
-            if (DEBUG) {
-                console.log(cnt, "CONTINUE NESTED", key, this.queues[key][0].isWrite ? "WRITER" : "READER", this.queuesReaders[key]);
-            }
-            setImmediate(this.queues[key].shift().fn);
-        }
-        return true;
-    }
-    
     /*
-     * Below is how this function works:
-     *
-     * Equivalent code:
-     * this.acquire(key1, () => {
-     *     this.acquire(key2, () => {
-     *         this.acquire(key3, fn);
-     *     });
-     * });
-     *
-     * Equivalent code:
-     * var fn3 = getFn(key3, fn);
-     * var fn2 = getFn(key2, fn3);
-     * var fn1 = getFn(key1, fn2);
-     * fn1();
+     * This function immediatly attempts to gain access to the
+     * locks for each key passed in. If a lock is already taken,
+     * it will be added to the queue. Only after every lock has
+     * received lock access will the passed in fn() be called.
      */
     _acquireBatch(isWrite, keys, fn, opts) {
-	var getFn = (key, fn) => {
-            return () => {
-	        return this._acquire(isWrite, key, fn, opts);
+        let acquiredLocks = 0;
+        let pendingAcquireResolve = [];
+        let acquireErr = null;
+
+        return new Promise((parentResolve, parentReject) => {
+            let checkAcquireFinished = () => {
+                if (acquiredLocks !== keys.length) {
+                    return;
+                }
+                this.debug("BATCH ACQUIRED", keys, acquiredLocks, acquireErr);
+                if (acquireErr) {
+                    releaseLocks();
+                } else {
+                    this._promiseTry(fn)
+                        .catch((err) => {
+                            acquireErr = err;
+                        })
+                            .then(releaseLocks);
+                }
             };
-	};
-
-	var fnx = fn;
-        // sort to prevent deadlocks
-        // keys need to lock in same order on multiple requests
-	keys.sort().reverse().forEach((key) => {
-	    fnx = getFn(key, fnx);
-	});
-
-        return fnx();
+            let releaseLocks = () => {
+                pendingAcquireResolve.forEach((cb) => {
+                    cb();
+                });
+                if (acquireErr) {
+                    parentReject(acquireErr);
+                } else {
+                    parentResolve();
+                }
+            }
+            keys.forEach((key) => {
+                this._acquire(isWrite, key, () => {
+                    ++acquiredLocks;
+                    return new Promise((acquireResolve, acquireReject) => {
+                        pendingAcquireResolve.push(acquireResolve);
+                        checkAcquireFinished();
+                    });
+                }, opts).catch((err) => {
+                    acquireErr = err;
+                    ++acquiredLocks;
+                    checkAcquireFinished();
+                });
+            });
+        });
     }
 
     /*
@@ -223,6 +274,13 @@ class ReadwriteLock {
 	} catch (e) {
 	    return this.Promise.reject(e);
 	}
+    }
+
+    debug(...args) {
+        if (!DEBUG) {
+            return;
+        }
+        console.log("readwriteLock", ...args);
     }
         
 }

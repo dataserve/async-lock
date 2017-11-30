@@ -37,12 +37,13 @@ describe("ReadwriteLock Tests", function() {
 
 		let timespan = Math.random() * 10;
 		console.log("task%s(key%s) start, %s ms", number, key, timespan);
-                return delayPromise(timespan);
+                return delayPromise(timespan)
+                    .then(() => {
+		        isRunning[key] = false;
+                    });
 	    }).then((result) => {
-		console.log("task%s(key%s) done", number, key);
-
-		isRunning[key] = false;
-		finishedCount++;
+                console.log("task%s(key%s) done", number, key);
+                finishedCount++;
 		if (finishedCount === taskCount) {
 		    assert(!lock.isBusy());
 		    done();
@@ -72,9 +73,11 @@ describe("ReadwriteLock Tests", function() {
 	    let timespan = 10;
 	    console.log("task1(key1) start, %sms", timespan);
             
-            return delayPromise(timespan);
+            return delayPromise(timespan)
+                .then(() => {
+                    busy1 = false;
+                });
 	}).then((result) => {
-	    busy1 = false;
 	    console.log("task1(key1) done");
 	    finish();
         }).catch((err) => {
@@ -88,9 +91,11 @@ describe("ReadwriteLock Tests", function() {
 	    let timespan = 20;
 	    console.log("task2(key2) start, %sms", timespan);
 
-            return delayPromise(timespan);
+            return delayPromise(timespan)
+                .then(() => {
+                    busy2 = false;
+                });
 	}).then((result) => {
-	    busy2 = false;
 	    console.log("task2(key2) done");
 	    finish();
         }).catch((err) => {
@@ -104,10 +109,11 @@ describe("ReadwriteLock Tests", function() {
 	    let timespan = 10;
 	    console.log("task3(key1&2) start, %sms", timespan);
 
-            return delayPromise(timespan);
+            return delayPromise(timespan)
+                .then(() => {
+	            busy1 = busy2 = false;
+                });
 	}).then((result) => {
-	    busy1 = busy2 = false;
-
 	    console.log("task3(key1&2) done");
 	    finish();
         }).catch((err) => {
