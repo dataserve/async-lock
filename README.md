@@ -68,7 +68,7 @@ function concatHtml() {
 
 function readHtml() {
     return new Promise((resolve, reject) => {
-        fs.readFile('concat_html.txt', (result) => resolve(result))
+        fs.readFile('concat_html.txt', result => resolve(result))
     });
 }
 ```
@@ -85,22 +85,22 @@ With readwriteLock, you can make sure that read locks can run concurrently as lo
 lock.acquireWrite('key', () => {
     // no other locks exist when this is running
     return concatHtml();
-}).then((result) => {
-}).catch((err) => {
+}).then(result => {
+}).catch(err => {
 });
 
 lock.acquireRead('key', () => {
     // runs parallel with other read locks
     return readHtml();
-}).then((result) => {
-}).catch((err) => {
+}).then(result => {
+}).catch(err => {
 });
 
 lock.acquireRead('key', () => {
     // runs parallel with other read locks
     return readHtml();
-}).then((result) => {
-}).catch((err) => {
+}).then(result => {
+}).catch(err => {
 });
 ```
 
@@ -187,14 +187,14 @@ lock.acquireRead(key, fn)
     .then(() => {
            // critical section will never be entered if timeout occurs
     })
-    .catch((err) => {
+    .catch(err => {
            // timed out error will be returned here if lock not acquired in given time
     });
 lock.acquireWrite(key, fn)
     .then(() => {
            // critical section will never be entered if timeout occurs
     })
-    .catch((err) => {
+    .catch(err => {
            // timed out error will be returned here if lock not acquired in given time
     });
 
@@ -204,14 +204,14 @@ lock.acquireRead(key, fn)
     .then(() => {
            // critical section will never be entered if pending limit reached
     })
-    .catch((err) => {
+    .catch(err => {
            // too many pending tasks error will be returned here if lock not acquired in given time
     });
 lock.acquireWrite(key, fn)
     .then(() => {
            // critical section will never be entered if pending limit reached
     })
-    .catch((err) => {
+    .catch(err => {
            // too many pending tasks error will be returned here if lock not acquired in given time
     });
 
