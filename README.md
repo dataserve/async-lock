@@ -56,9 +56,9 @@ Read locks run concurrently, while write locks run exclusively. This is useful w
 ```js
 function concatHtml() {
     return new Promise((resolve, reject) => {
-        http.get("http://www.google.com", googleHtml => {
+        htmlDownload("https://www.google.com", googleHtml => {
             fs.writeFile('concat_html.txt', googleHtml, () => {
-                http.get("http://www.github.com", githubHtml, () => {
+                htmlDownload("https://www.github.com", githubHtml => {
                     fs.appendFile('concat_html.txt', githubHtml, () => resolve());
                 });
             });
