@@ -166,10 +166,10 @@ class ReadwriteLock {
 
                 this._promiseTry(fn)
                     .then((ret) => {
-                        done(true, undefined, ret)
+                        done(true, undefined, ret);
                     })
                     .catch((error) => {
-                        done(true, error)
+                        done(true, error);
                     });
             };
 
@@ -211,6 +211,16 @@ class ReadwriteLock {
         keys = [...new Set(keys)];
 
         return new Promise((parentResolve, parentReject) => {
+            let releaseLocks = () => {
+                pendingAcquireResolve.forEach((cb) => {
+                    cb();
+                });
+                if (acquireErr) {
+                    parentReject(acquireErr);
+                } else {
+                    parentResolve();
+                }
+            };
             let checkAcquireFinished = () => {
                 if (acquiredLocks !== keys.length) {
                     return;
@@ -226,16 +236,6 @@ class ReadwriteLock {
                             .then(releaseLocks);
                 }
             };
-            let releaseLocks = () => {
-                pendingAcquireResolve.forEach((cb) => {
-                    cb();
-                });
-                if (acquireErr) {
-                    parentReject(acquireErr);
-                } else {
-                    parentResolve();
-                }
-            }
             keys.forEach((key) => {
                 this._acquire(isWrite, key, () => {
                     ++acquiredLocks;
