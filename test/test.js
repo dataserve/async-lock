@@ -3,8 +3,9 @@
 var Q = require("q");
 var Bluebird = require("bluebird");
 var _ = require("lodash");
-var ReadwriteLock = require("../index.js");
 var assert = require("assert");
+
+var ReadwriteLock = require("../index");
 
 Q.longStackSupport = true;
 
@@ -14,111 +15,135 @@ function delayPromise(delay) {
     });
 }
 
+function getKey(i) {
+    var key;
+    if (i === 0) {
+        key = "test-key";
+    } else if (i === 1) {
+        key = [...Array(10).keys()];
+    } else {
+        key = [];
+        for (let i = 0; i < 1000; ++i) {
+            key.push(Math.floor(Math.random() * 1000));
+        }
+    }
+    return key;
+}
+
 describe("ReadwriteLock Tests", function() {
     it("Single write key test", function(done) {
 	var lock = new ReadwriteLock();
 
-	var taskCount = 8;
-	var keyCount = 2;
-	var finishedCount = 0;
+        let runTest = (i) => {
+            return new Promise((resolve, reject) => {
+	        var taskCount = 8;
+	        var finishedCount = 0;
+	        var isRunning = {};
+	        var taskNumbers = [...Array(taskCount).keys()];
 
-	var isRunning = {};
+	        taskNumbers.forEach((number) => {
+                    let key = getKey(number % 3);
+	            lock.acquireWrite(key, () => {
+		        assert(!isRunning[key]);
+		        assert(lock.isBusy() && lock.isBusy(key));
 
-	var taskNumbers = [];
-	for (let i = 0; i < taskCount; i++) {
-	    taskNumbers.push(i);
-	}
-
-	taskNumbers.forEach((number) => {
-	    let key = number % keyCount;
-	    lock.acquireWrite(key, () => {
-		assert(!isRunning[key]);
-		assert(lock.isBusy() && lock.isBusy(key));
-
-		let timespan = Math.random() * 10;
-		console.log("task%s(key%s) start, %s ms", number, key, timespan);
-                return delayPromise(timespan)
-                    .then(() => {
-		        isRunning[key] = false;
+		        let delay = Math.random() * 10;
+                        return delayPromise(delay)
+                            .then(() => {
+		                isRunning[key] = false;
+                            });
+	            }).then((result) => {
+                        finishedCount++;
+		        if (finishedCount === taskCount) {
+		            assert(!lock.isBusy());
+		            done();
+		        }
+                    }).catch((err) => {
+                        done(err);
                     });
-	    }).then((result) => {
-                console.log("task%s(key%s) done", number, key);
-                finishedCount++;
-		if (finishedCount === taskCount) {
-		    assert(!lock.isBusy());
-		    done();
-		}
-            }).catch((err) => {
-                return done(err);
+	        });
             });
-	});
+        };
+
+        runTest(1)
+            .then(() => runTest(2))
+            .then(() => runTest(3))
+            .then(() => done())
+            .catch(err => done(err));
     });
 
-    it("Multiple keys test", function(done) {
+    it("Read/write locks single/multi keys", function(done) {
 	var lock = new ReadwriteLock();
-	var busy1 = false, busy2 = false;
+        var key;
 
-	var finishCount = 0;
-	var finish = () => {
-	    finishCount++;
-	    if (finishCount === 3) {
-		done();
-	    }
-	};
-
-	lock.acquireWrite(1, () => {
-	    assert(!busy1);
-	    busy1 = true;
-
-	    let timespan = 10;
-	    console.log("task1(key1) start, %sms", timespan);
-            
-            return delayPromise(timespan)
-                .then(() => {
-                    busy1 = false;
+        let runTest = (i) => {
+            return new Promise((resolve, reject) => {
+                let write1Done = false, write2Done = false,
+                    read1Done = false, read2Done = false;
+                
+                lock.acquireWrite(getKey(i), () => {
+                    assert(!write1Done);
+                    let delay = Math.random() * 10;
+                    return delayPromise(delay)
+                        .then(() => {
+                            write1Done = true;
+                        });
+                }).catch((err) => {
+                    reject(err);
                 });
-	}).then((result) => {
-	    console.log("task1(key1) done");
-	    finish();
-        }).catch((err) => {
-            return done(err);
-        });
-
-	lock.acquireWrite(2, () => {
-	    assert(!busy2);
-	    busy2 = true;
-
-	    let timespan = 20;
-	    console.log("task2(key2) start, %sms", timespan);
-
-            return delayPromise(timespan)
-                .then(() => {
-                    busy2 = false;
+                lock.acquireWrite(getKey(i), () => {
+                    assert(write1Done);
+                    assert(!write2Done);
+                    let delay = Math.random() * 10;
+                    return delayPromise(delay)
+                        .then(() => {
+                            write2Done = true;
+                        });
+                }).catch((err) => {
+                    reject(err);
                 });
-	}).then((result) => {
-	    console.log("task2(key2) done");
-	    finish();
-        }).catch((err) => {
-            return done(err);
-        });
+                lock.acquireRead(getKey(i), () => {
+                    assert(!read1Done);
+                    assert(write1Done);
 
-	lock.acquireWrite([1, 2], () => {
-	    assert(!busy1 && !busy2);
-	    busy1 = busy2 = true;
-
-	    let timespan = 10;
-	    console.log("task3(key1&2) start, %sms", timespan);
-
-            return delayPromise(timespan)
-                .then(() => {
-	            busy1 = busy2 = false;
+                    let delay = Math.random() * 10;
+                    return delayPromise(delay)
+                        .then(() => {
+                            read1Done = true;
+                        });
+                }).catch((err) => {
+                    reject(err);
                 });
-	}).then((result) => {
-	    console.log("task3(key1&2) done");
-	    finish();
-        }).catch((err) => {
-            return done(err);
-        });
+                lock.acquireRead(getKey(i), () => {
+                    assert(!read2Done);
+                    assert(write1Done);
+                    
+                    let delay = Math.random() * 10;
+                    return delayPromise(delay)
+                        .then(() => {
+                            read2Done = true;
+                        });
+                }).catch((err) => {
+                    reject(err);
+                });
+                lock.acquireWrite(getKey(i), () => {
+                    assert(read1Done && read2Done);
+                    
+                    let delay = Math.random() * 10;
+                    return delayPromise(delay);
+                }).then(() => {
+                    resolve();
+                }).catch((err) => {
+                    reject(err);
+                });
+            });
+        };
+
+        runTest(1)
+            .then(() => runTest(2))
+            .then(() => runTest(3))
+            .then(() => done())
+            .catch(err => done(err));
     });
 
     it("Time out test", function(done) {
@@ -146,64 +171,19 @@ describe("ReadwriteLock Tests", function() {
 	});
     });
 
-    it("Promise mode (Q)", function(done) {
-	var lock = new ReadwriteLock();
-	var value = 0;
-	var concurrency = 8;
-
-	Q.all(_.range(concurrency).map(() => {
-	    return lock.acquireWrite("key", () => {
-		let tmp = null;
-		// Simulate non-atomic check and set
-		return Q() // jshint ignore:line
-		    .delay(_.random(10))
-		    .then(() => {
-			tmp = value;
-		    })
-		    .delay(_.random(20))
-		    .then(() => {
-			value = tmp + 1;
-		    });
-	    });
-	}))
-	    .then(() => {
-		assert(value === concurrency);
-	    })
-	    .then(() => {
-		let key1 = false, key2 = false;
-		lock.acquireWrite("key1", () => {
-		    key1 = true;
-                    return delayPromise(20)
-                        .then(() => {
-			    key1 = false;
-		        });
-		});
-		lock.acquireWrite("key2", () => {
-		    key2 = true;
-		    return delayPromise(10)
-                        .then(() => {
-			    key2 = false;
-		        });
-		});
-
-		return lock.acquireWrite(["key1", "key2"], () => {
-		    assert(key1 === false && key2 === false);
-		});
-	    })
-	    .nodeify(done);
-    });
-
     it("Error handling", function(done) {
 	var lock = new ReadwriteLock();
 	lock.acquireWrite("key", () => {
 	    throw new Error("error");
-	}).catch((err) => {
+	}).then(() => {
+            done(new Error("catch failed"));
+        }).catch((err) => {
 	    assert(err.message === "error");
 	    done();
 	});
     });
 
-    it("Too much pending", function(done) {
+    it("Too many pending", function(done) {
 	var lock = new ReadwriteLock({maxPending: 1});
 	lock.acquireWrite("key", () => {
 	    return delayPromise(20);
@@ -252,26 +232,6 @@ describe("ReadwriteLock Tests", function() {
 	} catch (e) {
 	    done();
 	}
-    });
-
-    it("bug #2 on https://github.com/rain1017/async-lock/issues/2", function(done) {
-	var lock = new ReadwriteLock({});
-
-	// this case gave a TypeError
-	var work = () => {
-	    return delayPromise(10);
-	};
-
-	var doneCount = 0;
-	var cb = () => {
-	    doneCount++;
-	    if (doneCount === 2) {
-		done();
-	    }
-	};
-
-	lock.acquireWrite(["A", "B", "C"], work).then(cb, cb);
-	lock.acquireWrite(["A", "B", "C"], work).then(cb, cb);
     });
 
 });

@@ -36,7 +36,7 @@ class Lock {
     }
 
     canRead() {
-        return this.queue.length === 0;
+        return this.queue.length === 0 && 0 <= this.readers;
     }
     
     isEmpty() {
@@ -85,7 +85,6 @@ class ReadwriteLock {
         // format: {key : [{fn: fn, isWrite: isWrite}, {fn: fn, isWrite: isWrite}]}
         // queues[key] = null indicates no job running for key
         this.queues = {};
-        this.queuesReaders = {};
         this.cnt = 0;
 
         this.timeout = opts.timeout || DEFAULT_TIMEOUT;
@@ -183,9 +182,8 @@ class ReadwriteLock {
             } else if (this.maxPending <= this.queues[key].pendingCnt()) {
                 done(false, new Error("Too much pending tasks"));
             } else {
-                if (DEBUG) {
-                    console.log(cnt, "QUEUE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
-                }
+                this.debug(cnt, "QUEUE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+
                 this.queues[key].append(cnt, isWrite, run);
                 
                 let timeout = opts.timeout || this.timeout;
@@ -209,6 +207,8 @@ class ReadwriteLock {
         let acquiredLocks = 0;
         let pendingAcquireResolve = [];
         let acquireErr = null;
+
+        keys = [...new Set(keys)];
 
         return new Promise((parentResolve, parentReject) => {
             let checkAcquireFinished = () => {
@@ -260,6 +260,13 @@ class ReadwriteLock {
     isBusy(key) {
         if (!key) {
             return 0 < Object.keys(this.queues).length;
+        } else if (Array.isArray(key)) {
+            for (let k in key) {
+                if (this.isBusy(k)) {
+                    return true;
+                }
+            }
+            return false;
         } else {
             return !!this.queues[key];
         }
