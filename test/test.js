@@ -32,36 +32,36 @@ function getKey(i) {
 
 describe("ReadwriteLock Tests", function() {
     it("Single write key test", function(done) {
-	var lock = new ReadwriteLock();
+        var lock = new ReadwriteLock();
 
         let runTest = (i) => {
             return new Promise((resolve, reject) => {
-	        var taskCount = 8;
-	        var finishedCount = 0;
-	        var isRunning = {};
-	        var taskNumbers = [...Array(taskCount).keys()];
+                var taskCount = 8;
+                var finishedCount = 0;
+                var isRunning = {};
+                var taskNumbers = [...Array(taskCount).keys()];
 
-	        taskNumbers.forEach((number) => {
+                taskNumbers.forEach((number) => {
                     let key = getKey(number % 3);
-	            lock.acquireWrite(key, () => {
-		        assert(!isRunning[key]);
-		        assert(lock.isBusy() && lock.isBusy(key));
+                    lock.acquireWrite(key, () => {
+                        assert(!isRunning[key]);
+                        assert(lock.isBusy() && lock.isBusy(key));
 
-		        let delay = Math.random() * 10;
+                        let delay = Math.random() * 10;
                         return delayPromise(delay)
                             .then(() => {
-		                isRunning[key] = false;
+                                isRunning[key] = false;
                             });
-	            }).then((result) => {
+                    }).then((result) => {
                         finishedCount++;
-		        if (finishedCount === taskCount) {
-		            assert(!lock.isBusy());
-		            done();
-		        }
+                        if (finishedCount === taskCount) {
+                            assert(!lock.isBusy());
+                            done();
+                        }
                     }).catch((err) => {
                         done(err);
                     });
-	        });
+                });
             });
         };
 
@@ -73,7 +73,7 @@ describe("ReadwriteLock Tests", function() {
     });
 
     it("Read/write locks single/multi keys", function(done) {
-	var lock = new ReadwriteLock();
+        var lock = new ReadwriteLock();
         var key;
 
         let runTest = (i) => {
@@ -147,91 +147,91 @@ describe("ReadwriteLock Tests", function() {
     });
 
     it("Time out test", function(done) {
-	var lock = new ReadwriteLock({timeout: 20});
-	var timedout = false;
+        var lock = new ReadwriteLock({timeout: 20});
+        var timedout = false;
 
-	lock.acquireWrite("key", () => {
+        lock.acquireWrite("key", () => {
             return delayPromise(50);
-	}).then((result) => {
-	    assert(timedout);
-	    done();
-	}).catch((err) => {
-	    assert(timedout);
-	    done();
+        }).then((result) => {
+            assert(timedout);
+            done();
+        }).catch((err) => {
+            assert(timedout);
+            done();
         });
         
-	lock.acquireWrite("key", () => {
-	    assert("should not execute here");
-	}).catch((err) => {
-	    // timed out
-	    console.log(err);
-	    if (err) {
-		timedout = true;
-	    }
-	});
+        lock.acquireWrite("key", () => {
+            assert("should not execute here");
+        }).catch((err) => {
+            // timed out
+            console.log(err);
+            if (err) {
+                timedout = true;
+            }
+        });
     });
 
     it("Error handling", function(done) {
-	var lock = new ReadwriteLock();
-	lock.acquireWrite("key", () => {
-	    throw new Error("error");
-	}).then(() => {
+        var lock = new ReadwriteLock();
+        lock.acquireWrite("key", () => {
+            throw new Error("error");
+        }).then(() => {
             done(new Error("catch failed"));
         }).catch((err) => {
-	    assert(err.message === "error");
-	    done();
-	});
+            assert(err.message === "error");
+            done();
+        });
     });
 
     it("Too many pending", function(done) {
-	var lock = new ReadwriteLock({maxPending: 1});
-	lock.acquireWrite("key", () => {
-	    return delayPromise(20);
-	});
-	lock.acquireWrite("key", () => {
-	    return delayPromise(20);
-	});
+        var lock = new ReadwriteLock({maxPending: 1});
+        lock.acquireWrite("key", () => {
+            return delayPromise(20);
+        });
+        lock.acquireWrite("key", () => {
+            return delayPromise(20);
+        });
 
-	lock.acquireWrite("key", () => {})
+        lock.acquireWrite("key", () => {})
             .then((result) => {
                 done(new Error("error"));
             })
-	    .catch((err) => {
-		done();
-	    });
+            .catch((err) => {
+                done();
+            });
     });
 
     it("use bluebird promise", function(done) {
-	var lock = new ReadwriteLock({Promise: Bluebird});
-	lock.acquireWrite("key", () => {})
+        var lock = new ReadwriteLock({Promise: Bluebird});
+        lock.acquireWrite("key", () => {})
             .then(done, done);
     });
 
     it("use Q promise", function(done) {
-	var lock = new ReadwriteLock({Promise: Q});
-	lock.acquireWrite("key", () => {})
+        var lock = new ReadwriteLock({Promise: Q});
+        lock.acquireWrite("key", () => {})
             .then(done, done);
     });
     
     it("use ES6 promise", function(done) {
-	var lock = new ReadwriteLock({Promise: Promise});
-	lock.acquireWrite("key", () => {})
-	    .then(done, done);
+        var lock = new ReadwriteLock({Promise: Promise});
+        lock.acquireWrite("key", () => {})
+            .then(done, done);
     });
 
     it("uses global Promise by default", function(done) {
-	var lock = new ReadwriteLock({});
-	lock.acquireWrite("key", () => {})
-	    .then(done, done);
+        var lock = new ReadwriteLock({});
+        lock.acquireWrite("key", () => {})
+            .then(done, done);
     });
 
     it("invalid parameter", function(done) {
-	var lock = new ReadwriteLock();
-	try {
-	    lock.acquireWrite("key", null);
-	} catch (e) {
-	    done();
-	}
+        var lock = new ReadwriteLock();
+        try {
+            lock.acquireWrite("key", null);
+        } catch (e) {
+            done();
+        }
     });
 
 });
