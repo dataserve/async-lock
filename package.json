@@ -29,10 +29,12 @@
   "scripts": {
     "start": "grunt",
     "test": "grunt test",
-    "postinstall": ""
+    "postinstall": "",
+    "coverage": "istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/.bin/codacy-coverage && rm -rf ./coverage"
   },
   "devDependencies": {
     "bluebird": "~3.5.0",
+    "codacy-coverage": "^2.0.3",
     "grunt": "^1.0.1",
     "grunt-cli": "~1.2.0",
     "grunt-contrib-clean": "~1.1.0",

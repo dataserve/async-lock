@@ -3,6 +3,7 @@
 [Read/Write locks](https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock) on asynchronous code
 
 [![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
+[![Codacy Badge](https://api.codacy.com/project/badge/Coverage/0b57b3c89aee44acab6514989f0ac872)](https://www.codacy.com/app/kdeegan/readwrite-lock?utm_source=github.com&utm_medium=referral&utm_content=dataserve/readwrite-lock&utm_campaign=Badge_Coverage)
 
 RW lock rules:
 * there may be one or more readers at a time
