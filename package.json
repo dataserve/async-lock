@@ -1,7 +1,7 @@
 {
   "name": "readwrite-lock",
   "description": "Read/Write lock on asynchronous code",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "author": {
     "name": "Kevin Deegan",
     "url": "https://github.com/kdeegan"
