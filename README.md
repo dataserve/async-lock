@@ -59,7 +59,7 @@ function concatHtml() {
         http.get("http://www.google.com", googleHtml => {
             fs.writeFile('concat_html.txt', googleHtml, () => {
                 http.get("http://www.github.com", githubHtml, () => {
-                    fs.appendFile('concat_html.txt', githubHtml, () => resolve);
+                    fs.appendFile('concat_html.txt', githubHtml, () => resolve());
                 });
             });
         });
