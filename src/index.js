@@ -13,9 +13,9 @@ class Lock {
 
     append(id, isWrite, run) {
         this.queue.push({
-            id: id,
-            isWrite: isWrite,
-            run: run
+            id,
+            isWrite,
+            run
         });
     }
 
@@ -60,10 +60,7 @@ class Lock {
         if (task.isWrite) {
             return tasks;
         }
-        while (true) {
-            if (this.queue.length === 0) {
-                break;
-            }
+        while (this.queue.length !== 0) {
             task = this.queue[0];
             if (task.isWrite) {
                 break;
