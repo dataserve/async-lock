@@ -6,10 +6,10 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/0b57b3c89aee44acab6514989f0ac872)](https://www.codacy.com/app/kdeegan/readwrite-lock?utm_source=github.com&utm_medium=referral&utm_content=dataserve/readwrite-lock&utm_campaign=Badge_Coverage)
 
 RW lock rules:
-* there may be one or more readers at a time
-* there may be only one writer at a time
-* attempts to acquire read lock are queued as long as a write lock is taken
-* attempts to acquire write lock are queued as long as at least one read lock is taken
+* There may be one or more readers at a time
+* There may be only one writer at a time
+* Attempts to acquire read lock are queued as long as a write lock is taken
+* Attempts to acquire write lock are queued as long as at least one read lock is taken
 
 Features
 * Uses ES6 promises

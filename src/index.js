@@ -96,7 +96,7 @@ class ReadwriteLock {
      * @param {Object} opts options
      */
     acquireRead(key, fn, opts) {
-        return this._acquire(false, key, fn,opts);
+        return this._acquire(false, key, fn, opts);
     }
     
     /**
@@ -107,7 +107,7 @@ class ReadwriteLock {
      * @param {Object} opts options
      */
     acquireWrite(key, fn, opts) {
-        return this._acquire(true, key, fn,opts);
+        return this._acquire(true, key, fn, opts);
     }
 
     _acquire(isWrite, key, fn, opts) {
@@ -121,7 +121,7 @@ class ReadwriteLock {
 
         opts = opts || {};
 
-        return new Promise((resolve, reject) => {
+        return new this.Promise((resolve, reject) => {
             let timer = null;
 
             let cnt = this.cnt++;
@@ -207,7 +207,7 @@ class ReadwriteLock {
 
         keys = [...new Set(keys)];
 
-        return new Promise((parentResolve, parentReject) => {
+        return new this.Promise((parentResolve, parentReject) => {
             let releaseLocks = () => {
                 pendingAcquireResolve.forEach((cb) => {
                     cb();
@@ -236,7 +236,7 @@ class ReadwriteLock {
             keys.forEach((key) => {
                 this._acquire(isWrite, key, () => {
                     ++acquiredLocks;
-                    return new Promise((acquireResolve, acquireReject) => {
+                    return new this.Promise((acquireResolve, acquireReject) => {
                         pendingAcquireResolve.push(acquireResolve);
                         checkAcquireFinished();
                     });

@@ -208,7 +208,7 @@ describe("ReadwriteLock Tests", function() {
     });
 
     it("use Q promise", function(done) {
-        var lock = new ReadwriteLock({Promise: Q});
+        var lock = new ReadwriteLock({Promise: Q.Promise});
         lock.acquireWrite("key", () => {})
             .then(done, done);
     });
