@@ -122,8 +122,8 @@ lock.acquireRead(key, () => {
 }, opts).then(() => {
     // continue execution outside critical section
     // NOTE: LOCK IS RELEASED AS SOON AS CRITICAL SECTION RETURNS
-             there is no guaranteed order of this "then()" call
-             compared to other recently released locks of same key
+    //       there is no guaranteed order of this "then()" call
+    //       compared to other recently released locks of same key
 });
 
 /**
@@ -137,8 +137,8 @@ lock.acquireWrite(key, () => {
 }, opts).then(() => {
     // continue execution outside critical section
     // NOTE: LOCK IS RELEASED AS SOON AS CRITICAL SECTION RETURNS
-             there is no guaranteed order of this "then()" call
-             compared to other recently released locks of same key
+    //       there is no guaranteed order of this "then()" call
+    //       compared to other recently released locks of same key
 });
 ```
 
