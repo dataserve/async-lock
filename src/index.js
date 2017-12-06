@@ -75,16 +75,22 @@ class Lock {
 class ReadwriteLock {
 
     constructor(opts) {
-        opts = opts || {};
-
-        this.Promise = opts.Promise || Promise;
-
         // format: {key : [{fn: fn, isWrite: isWrite}, {fn: fn, isWrite: isWrite}]}
         // queues[key] = null indicates no job running for key
         this.queues = {};
+        
         this.cnt = 0;
 
+        this.setOpts(opts);
+    }
+
+    setOpts(opts) {
+        opts = opts || {};
+        
+        this.Promise = opts.Promise || Promise;
+        
         this.timeout = opts.timeout || DEFAULT_TIMEOUT;
+        
         this.maxPending = opts.maxPending || DEFAULT_MAX_PENDING;
     }
 
@@ -135,9 +141,11 @@ class ReadwriteLock {
 
                 if (locked) {
                     this.debug(cnt, "DONE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                    
                     this.queues[key].done(isWrite);
 
                     let pending = this.queues[key].shiftPending();
+                    
                     if (pending && pending.length) {
                         while (pending.length) {
                             let task = pending.shift();
@@ -145,6 +153,7 @@ class ReadwriteLock {
                             this.debug(task.id, "SHIFTED", task.isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
                             
                             this.queues[key].run(task.isWrite);
+                            
                             task.run();
                         }
                     } else if (this.queues[key].isEmpty()) {
@@ -156,6 +165,7 @@ class ReadwriteLock {
             let run = () => {
                 if (timer) {
                     clearTimeout(timer);
+                    
                     timer = null;
                 }
 
@@ -174,7 +184,9 @@ class ReadwriteLock {
                 if (!this.queues[key]) {
                     this.queues[key] = new Lock;
                 }
+                
                 this.queues[key].run(isWrite);
+                
                 run();
             } else if (this.maxPending <= this.queues[key].pendingCnt()) {
                 done(false, new Error("Too much pending tasks"));
@@ -184,9 +196,11 @@ class ReadwriteLock {
                 this.queues[key].append(cnt, isWrite, run);
                 
                 let timeout = opts.timeout || this.timeout;
+                
                 if (timeout) {
                     timer = setTimeout(() => {
                         timer = null;
+                        
                         done(false, new Error("readwrite-lock timed out"));
                     }, timeout);
                 }
@@ -202,7 +216,9 @@ class ReadwriteLock {
      */
     _acquireBatch(isWrite, keys, fn, opts) {
         let acquiredLocks = 0;
+        
         let pendingAcquireResolve = [];
+        
         let acquireErr = null;
 
         keys = [...new Set(keys)];
@@ -212,6 +228,7 @@ class ReadwriteLock {
                 pendingAcquireResolve.forEach((cb) => {
                     cb();
                 });
+                
                 if (acquireErr) {
                     parentReject(acquireErr);
                 } else {
@@ -222,7 +239,9 @@ class ReadwriteLock {
                 if (acquiredLocks !== keys.length) {
                     return;
                 }
+                
                 this.debug("BATCH ACQUIRED", keys, acquiredLocks, acquireErr);
+                
                 if (acquireErr) {
                     releaseLocks();
                 } else {
@@ -230,19 +249,22 @@ class ReadwriteLock {
                         .catch((err) => {
                             acquireErr = err;
                         })
-                            .then(releaseLocks);
+                        .then(releaseLocks);
                 }
             };
             keys.forEach((key) => {
                 this._acquire(isWrite, key, () => {
                     ++acquiredLocks;
+                    
                     return new this.Promise((acquireResolve, acquireReject) => {
                         pendingAcquireResolve.push(acquireResolve);
                         checkAcquireFinished();
                     });
                 }, opts).catch((err) => {
                     acquireErr = err;
+                    
                     ++acquiredLocks;
+                    
                     checkAcquireFinished();
                 });
             });
@@ -263,6 +285,7 @@ class ReadwriteLock {
                     return true;
                 }
             }
+            
             return false;
         } else {
             return !!this.queues[key];
@@ -284,6 +307,7 @@ class ReadwriteLock {
         if (!DEBUG) {
             return;
         }
+        
         console.log("readwriteLock", ...args);
     }
     
