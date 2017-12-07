@@ -5,6 +5,11 @@
 [![Build Status](https://api.travis-ci.org/dataserve/readwrite-lock.svg?branch=master)](https://travis-ci.org/dataserve/readwrite-lock)
 [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/0b57b3c89aee44acab6514989f0ac872)](https://www.codacy.com/app/kdeegan/readwrite-lock?utm_source=github.com&utm_medium=referral&utm_content=dataserve/readwrite-lock&utm_campaign=Badge_Coverage)
 
+## Installation
+```
+npm install readwrite-lock
+```
+
 Readwrite lock rules:
 * There may be one or more readers at a time
 * There may be only one writer at a time
@@ -42,8 +47,16 @@ With readwriteLock, you can easily write your async critical section
 ```js
 lock.acquireWrite('key', () => {
     // Concurrency safe
-    redis.get('key', (err, value) => {
-        redis.set('key', value * 2);
+    return new Promise((resolve, reject) => {
+        redis.get('key', (err, value) => {
+            redis.set('key', value * 2, (err, value) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
     });
 }).then((result) => {
 }).catch((err) => {
@@ -105,7 +118,7 @@ lock.acquireRead('key', () => {
 });
 ```
 
-## Get Started
+## Getting Started
 
 ```js
 var ReadwriteLock = require('readwrite-lock');
@@ -143,7 +156,6 @@ lock.acquireWrite(key, () => {
 ```
 
 ## Error Handling
-
 ```js
 lock.acquireRead(key, () => {
     throw new Error('error');
@@ -160,7 +172,6 @@ lock.acquireWrite(key, () => {
 ```
 
 ## Acquire multiple keys
-
 ```js
 lock.acquireRead([key1, key2], fn)
     .then(() => {
@@ -180,7 +191,6 @@ lock.acquireWrite([key1, key2], fn)
 ```
 
 ## Options
-
 ```js
 // Specify timeout
 var lock = new ReadwriteLock({timeout : 5000});
@@ -221,7 +231,7 @@ lock.isBusy();
 
 // Use your own promise library instead of the global Promise variable
 var lock = new ReadwriteLock({Promise : require('bluebird')}); // Bluebird
-var lock = new ReadwriteLock({Promise : require('q')}); // Q
+var lock = new ReadwriteLock({Promise : require('q').Promise}); // Q
 ```
 
 ## Issues

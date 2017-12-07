@@ -227,11 +227,13 @@ describe("ReadwriteLock Tests", function() {
 
     it("invalid parameter", function(done) {
         var lock = new ReadwriteLock();
-        try {
-            lock.acquireWrite("key", null);
-        } catch (e) {
-            done();
-        }
+
+        lock.acquireWrite("key", null)
+            .then(() => {
+                assert("invalid parameter not caught");
+            }).catch((err) => {
+                done();
+            });
     });
 
 });
