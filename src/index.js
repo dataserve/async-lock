@@ -122,7 +122,7 @@ class ReadwriteLock {
         }
 
         if (typeof fn !== "function") {
-            throw new Error("You must pass a function to execute");
+            return this.Promise.reject(new Error("You must pass a function to execute"));
         }
 
         opts = opts || {};

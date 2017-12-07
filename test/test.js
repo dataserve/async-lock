@@ -148,31 +148,24 @@ describe("ReadwriteLock Tests", function() {
 
     it("Time out test", function(done) {
         var lock = new ReadwriteLock({timeout: 20});
-        var timedout = false;
 
         lock.acquireWrite("key", () => {
             return delayPromise(50);
         }).then((result) => {
-            assert(timedout);
-            done();
         }).catch((err) => {
-            assert(timedout);
-            done();
+            assert("unknown error in timeout test");
         });
         
         lock.acquireWrite("key", () => {
             assert("should not execute here");
         }).catch((err) => {
-            // timed out
-            console.log(err);
-            if (err) {
-                timedout = true;
-            }
+            done();
         });
     });
 
     it("Error handling", function(done) {
         var lock = new ReadwriteLock();
+        
         lock.acquireWrite("key", () => {
             throw new Error("error");
         }).then(() => {
@@ -185,6 +178,7 @@ describe("ReadwriteLock Tests", function() {
 
     it("Too many pending", function(done) {
         var lock = new ReadwriteLock({maxPending: 1});
+        
         lock.acquireWrite("key", () => {
             return delayPromise(20);
         });
@@ -203,24 +197,28 @@ describe("ReadwriteLock Tests", function() {
 
     it("use bluebird promise", function(done) {
         var lock = new ReadwriteLock({Promise: Bluebird});
+        
         lock.acquireWrite("key", () => {})
             .then(done, done);
     });
 
     it("use Q promise", function(done) {
         var lock = new ReadwriteLock({Promise: Q.Promise});
+        
         lock.acquireWrite("key", () => {})
             .then(done, done);
     });
     
     it("use ES6 promise", function(done) {
         var lock = new ReadwriteLock({Promise: Promise});
+        
         lock.acquireWrite("key", () => {})
             .then(done, done);
     });
 
     it("uses global Promise by default", function(done) {
         var lock = new ReadwriteLock({});
+        
         lock.acquireWrite("key", () => {})
             .then(done, done);
     });
