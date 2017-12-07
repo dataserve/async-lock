@@ -205,10 +205,18 @@ describe("ReadwriteLock Tests", function() {
         lock.acquireWrite("key", () => {
             throw new Error("error");
         }).then(() => {
-            done(new Error("catch failed"));
+            assert("catch failed");
         }).catch((err) => {
             assert(err.message === "error");
-            done();
+        }).then(() => {
+            return lock.acquireWrite(["key1", "key2"], () => {
+                throw new Error("error");
+            }).then(() => {
+                done(new Error("catch failed"));
+            }).catch((err) => {
+                assert(err.message === "error");
+                done();
+            });
         });
     });
 
