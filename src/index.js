@@ -317,7 +317,7 @@ class ReadwriteLock {
             return;
         }
         
-        console.log("readwriteLock", ...args);
+        //console.log("readwriteLock", ...args);
     }
     
 }
