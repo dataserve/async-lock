@@ -8,6 +8,7 @@ class Lock {
 
     constructor() {
         this.queue = [];
+        
         this.readers = 0;
     }
 
@@ -51,20 +52,28 @@ class Lock {
         if (this.queue.length === 0) {
             return;
         }
+        
         if (this.queue[0].isWrite && 0 < this.readers) {
             return;
         }
+        
         var tasks = [];
+        
         var task = this.queue.shift();
+        
         tasks.push(task);
+        
         if (task.isWrite) {
             return tasks;
         }
+        
         while (this.queue.length !== 0) {
             task = this.queue[0];
+            
             if (task.isWrite) {
                 break;
             }
+            
             tasks.push(this.queue.shift());
         }
         return tasks;

@@ -79,10 +79,14 @@ describe("ReadwriteLock Tests", function() {
         let runTest = (i) => {
             return new Promise((resolve, reject) => {
                 let write1Done = false, write2Done = false,
-                    read1Done = false, read2Done = false;
+                    read1Done = false, read2Done = false,
+                    key = getKey(i);
+
+                assert(!lock.isBusy(key));
                 
-                lock.acquireWrite(getKey(i), () => {
+                lock.acquireWrite(key, () => {
                     assert(!write1Done);
+                    assert(lock.isBusy() && lock.isBusy(key));
                     let delay = Math.random() * 10;
                     return delayPromise(delay)
                         .then(() => {
@@ -91,9 +95,10 @@ describe("ReadwriteLock Tests", function() {
                 }).catch((err) => {
                     reject(err);
                 });
-                lock.acquireWrite(getKey(i), () => {
+                lock.acquireWrite(key, () => {
                     assert(write1Done);
                     assert(!write2Done);
+                    assert(lock.isBusy() && lock.isBusy(key));
                     let delay = Math.random() * 10;
                     return delayPromise(delay)
                         .then(() => {
@@ -102,7 +107,7 @@ describe("ReadwriteLock Tests", function() {
                 }).catch((err) => {
                     reject(err);
                 });
-                lock.acquireRead(getKey(i), () => {
+                lock.acquireRead(key, () => {
                     assert(!read1Done);
                     assert(write1Done);
 
@@ -114,7 +119,7 @@ describe("ReadwriteLock Tests", function() {
                 }).catch((err) => {
                     reject(err);
                 });
-                lock.acquireRead(getKey(i), () => {
+                lock.acquireRead(key, () => {
                     assert(!read2Done);
                     assert(write1Done);
                     
@@ -126,7 +131,7 @@ describe("ReadwriteLock Tests", function() {
                 }).catch((err) => {
                     reject(err);
                 });
-                lock.acquireWrite(getKey(i), () => {
+                lock.acquireWrite(key, () => {
                     assert(read1Done && read2Done);
                     
                     let delay = Math.random() * 10;
@@ -150,6 +155,12 @@ describe("ReadwriteLock Tests", function() {
         var lock = new ReadwriteLock({timeout: 20});
 
         lock.acquireWrite("key", () => {
+        }).then((result) => {
+        }).catch((err) => {
+            assert("unknown error in timeout test");
+        });
+
+        lock.acquireWrite("key", () => {
             return delayPromise(50);
         }).then((result) => {
         }).catch((err) => {
@@ -163,6 +174,31 @@ describe("ReadwriteLock Tests", function() {
         });
     });
 
+    it("Time out multi test", function(done) {
+        var lock = new ReadwriteLock({timeout: 20}),
+            keys = ["key1", "key2"];
+
+        
+        lock.acquireWrite(keys, () => {
+        }).then((result) => {
+        }).catch((err) => {
+            assert("unknown error in timeout test");
+        });
+
+        lock.acquireWrite(keys, () => {
+            return delayPromise(50);
+        }).then((result) => {
+        }).catch((err) => {
+            assert("unknown error in timeout test");
+        });
+        
+        lock.acquireWrite(keys, () => {
+            assert("should not execute here");
+        }).catch((err) => {
+            done();
+        });
+    });
+    
     it("Error handling", function(done) {
         var lock = new ReadwriteLock();
         
