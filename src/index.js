@@ -58,24 +58,25 @@ class Lock {
         }
         
         var tasks = [];
-        
+
         var task = this.queue.shift();
-        
+
         tasks.push(task);
-        
+
         if (task.isWrite) {
             return tasks;
         }
-        
+
         while (this.queue.length !== 0) {
             task = this.queue[0];
-            
+
             if (task.isWrite) {
                 break;
             }
-            
+
             tasks.push(this.queue.shift());
         }
+        
         return tasks;
     }
 
@@ -244,6 +245,7 @@ class ReadwriteLock {
                     parentResolve();
                 }
             };
+            
             let checkAcquireFinished = () => {
                 if (acquiredLocks !== keys.length) {
                     return;
@@ -261,12 +263,14 @@ class ReadwriteLock {
                         .then(releaseLocks);
                 }
             };
+            
             keys.forEach((key) => {
                 this._acquire(isWrite, key, () => {
                     ++acquiredLocks;
                     
                     return new this.Promise((acquireResolve, acquireReject) => {
                         pendingAcquireResolve.push(acquireResolve);
+                        
                         checkAcquireFinished();
                     });
                 }, opts).catch((err) => {
