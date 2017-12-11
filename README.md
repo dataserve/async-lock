@@ -65,7 +65,7 @@ lock.acquireWrite('key', () => {
 
 ## Why read/write locking?
 
-Read locks run concurrently, while write locks run exclusively. This is useful when working with multiple async IO calls to modify a resource. Consider the below example of how read write locks can help organize your async multi threaded nodejs app. This is of course could be fixed using better coding rather than locks, it is only used as an example of what can happen when using asynchronous IO in NodeJS.
+Read locks run concurrently, while write locks run exclusively. This is useful when working with multiple async IO calls to modify a resource. Consider the below example of how read write locks can help organize your async nodejs app. This is of course could be fixed using better coding rather than locks, it is only used as an example of what can happen when using asynchronous IO in NodeJS.
 
 ```js
 function concatHtml() {
