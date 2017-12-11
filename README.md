@@ -65,7 +65,7 @@ lock.acquireWrite('key', () => {
 
 ## Why read/write locking?
 
-Read locks run concurrently, while write locks run exclusively. This is useful when working with multiple async IO calls to modify a resource. Below is an example of how read write locks work. This is of course not a real use case, it is only used as an example of what can happen when using asynchronous IO in NodeJS.
+Read locks run concurrently, while write locks run exclusively. This is useful when working with multiple async IO calls to modify a resource. Consider the below example of how read write locks can help organize your async multi threaded nodejs app. This is of course could be fixed using better coding rather than locks, it is only used as an example of what can happen when using asynchronous IO in NodeJS.
 
 ```js
 function concatHtml() {
@@ -194,37 +194,29 @@ lock.acquireWrite([key1, key2], fn)
 ```js
 // Specify timeout
 var lock = new ReadwriteLock({timeout : 5000});
-lock.acquireRead(key, fn)
-    .then(() => {
-           // critical section will never be entered if timeout occurs
-    })
-    .catch(err => {
-           // timed out error will be returned here if lock not acquired in given time
-    });
-lock.acquireWrite(key, fn)
-    .then(() => {
-           // critical section will never be entered if timeout occurs
-    })
-    .catch(err => {
-           // timed out error will be returned here if lock not acquired in given time
-    });
+lock.acquireRead(key, () => {
+    // critical section will never be entered if timeout occurs
+}).catch(err => {
+    // timed out error will be returned here if lock not acquired in given time
+});
+lock.acquireWrite(key, () => {
+    // critical section will never be entered if timeout occurs
+}).catch(err => {
+    // timed out error will be returned here if lock not acquired in given time
+});
 
 // Set max pending tasks
 var lock = new ReadwriteLock({maxPending : 1000});
-lock.acquireRead(key, fn)
-    .then(() => {
-           // critical section will never be entered if pending limit reached
-    })
-    .catch(err => {
-           // too many pending tasks error will be returned here if lock not acquired in given time
-    });
-lock.acquireWrite(key, fn)
-    .then(() => {
-           // critical section will never be entered if pending limit reached
-    })
-    .catch(err => {
-           // too many pending tasks error will be returned here if lock not acquired in given time
-    });
+lock.acquireRead(key, () => {
+    // critical section will never be entered if pending limit reached
+}).catch(err => {
+    // too many pending tasks error will be returned here if lock not acquired in given time
+});
+lock.acquireWrite(key, () => {
+    // critical section will never be entered if pending limit reached
+}).catch(err => {
+    // too many pending tasks error will be returned here if lock not acquired in given time
+});
 
 // Whether there is any running or pending async function
 lock.isBusy();
