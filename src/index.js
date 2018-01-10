@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const DEFAULT_TIMEOUT = 0; //Never
 const DEFAULT_MAX_PENDING = 1000;
@@ -128,11 +128,21 @@ class ReadwriteLock {
 
     _acquire(isWrite, key, fn, opts) {
         if (Array.isArray(key)) {
-            return this._acquireBatch(isWrite, key, fn, opts);
+          if (!key.length) {
+              return this.Promise.reject(new Error('Missing key'));
+            } else if (1 < key.length) {
+                return this._acquireBatch(isWrite, key, fn, opts);
+            } else {
+                key = key[0];
+            }
         }
 
-        if (typeof fn !== "function") {
-            return this.Promise.reject(new Error("You must pass a function to execute"));
+        if (typeof key === 'undefined' || key === null) {
+            return this.Promise.reject(new Error('Missing key'));
+        }
+        
+        if (typeof fn !== 'function') {
+            return this.Promise.reject(new Error('You must pass a function to execute'));
         }
 
         opts = opts || {};
@@ -150,7 +160,7 @@ class ReadwriteLock {
                 }
 
                 if (locked) {
-                    this.debug(cnt, "DONE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                    this.debug(cnt, 'DONE', isWrite ? 'WRITER' : 'READER', key, this.queues[key].readers);
                     
                     this.queues[key].done(isWrite);
 
@@ -160,7 +170,7 @@ class ReadwriteLock {
                         while (pending.length) {
                             let task = pending.shift();
 
-                            this.debug(task.id, "SHIFTED", task.isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                            this.debug(task.id, 'SHIFTED', task.isWrite ? 'WRITER' : 'READER', key, this.queues[key].readers);
                             
                             this.queues[key].run(task.isWrite);
                             
@@ -179,7 +189,7 @@ class ReadwriteLock {
                     timer = null;
                 }
 
-                this.debug(cnt, "RUN", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                this.debug(cnt, 'RUN', isWrite ? 'WRITER' : 'READER', key, this.queues[key].readers);
 
                 this._promiseTry(fn)
                     .then((ret) => {
@@ -199,9 +209,9 @@ class ReadwriteLock {
                 
                 run();
             } else if (this.maxPending <= this.queues[key].pendingCnt()) {
-                done(false, new Error("Too much pending tasks"));
+                done(false, new Error('Too much pending tasks'));
             } else {
-                this.debug(cnt, "QUEUE", isWrite ? "WRITER" : "READER", key, this.queues[key].readers);
+                this.debug(cnt, 'QUEUE', isWrite ? 'WRITER' : 'READER', key, this.queues[key].readers);
 
                 this.queues[key].append(cnt, isWrite, run);
                 
@@ -211,7 +221,7 @@ class ReadwriteLock {
                     timer = setTimeout(() => {
                         timer = null;
                         
-                        done(false, new Error("readwrite-lock timed out"));
+                        done(false, new Error('readwrite-lock timed out'));
                     }, timeout);
                 }
             }
@@ -234,7 +244,7 @@ class ReadwriteLock {
         keys = [...new Set(keys)];
 
         return new this.Promise((parentResolve, parentReject) => {
-            let releaseLocks = () => {
+            let releaseLocks = (result) => {
                 pendingAcquireResolve.forEach((cb) => {
                     cb();
                 });
@@ -242,7 +252,7 @@ class ReadwriteLock {
                 if (acquireErr) {
                     parentReject(acquireErr);
                 } else {
-                    parentResolve();
+                    parentResolve(result);
                 }
             };
             
@@ -251,12 +261,12 @@ class ReadwriteLock {
                     return;
                 }
                 
-                this.debug("BATCH ACQUIRED", keys, acquiredLocks, acquireErr);
+                this.debug('BATCH ACQUIRED', keys, acquiredLocks, acquireErr);
                 
                 if (acquireErr) {
                     releaseLocks();
                 } else {
-                    this._promiseTry(fn)
+                    return this._promiseTry(fn)
                         .catch((err) => {
                             acquireErr = err;
                         })
@@ -321,7 +331,7 @@ class ReadwriteLock {
             return;
         }
         
-        //console.log("readwriteLock", ...args);
+        //console.log('readwriteLock', ...args);
     }
     
 }
